@@ -7,5 +7,5 @@ app.config.from_object('config')  # deployment specific settings (no version con
 
 db = SQLAlchemy(app)
 
-import app.models  # noqa
-import app.views  # noqa
+import backend.models  # noqa
+import backend.views  # noqa

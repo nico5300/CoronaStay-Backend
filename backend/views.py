@@ -1,5 +1,5 @@
 
-from app import app
+from backend import app
 
 @app.route('/')
 def hello_world():

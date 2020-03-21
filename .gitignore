@@ -1,2 +1,4 @@
 .venv/
 .directory
+*.swp
+__pycache__/

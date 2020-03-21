@@ -1,12 +1,11 @@
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 
-app = Flask(__name__)
+app = Flask(__name__, instance_relative_config=True)
+app.config.from_object(__name__ + '.settings')  # default settings
+app.config.from_object('config')  # deployment specific settings (no version control)
 
+db = SQLAlchemy(app)
 
-@app.route('/')
-def hello_world():
-    return 'Hello World!'
-
-
-if __name__ == '__main__':
-    app.run()
+import app.models  # noqa
+import app.views  # noqa

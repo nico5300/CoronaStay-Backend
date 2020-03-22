@@ -3,7 +3,7 @@ from functools import wraps
 from flask import request, abort, g
 
 from backend import app
-from backend.models import User
+from backend.models import User, Story
 from flask_json import json_response
 
 import uuid
@@ -69,3 +69,30 @@ def register():
 @app.route("/story/", methods=["POST"])
 def story():
     pass
+
+
+@app.route("/story/<int:story_id>/", methods=["GET"])
+@api_key_required
+def get_story(story_id):
+    story = Story.query.filter_by(id_=story_id).first()
+    if not story:
+        abort(404)
+    return json_response(data_={
+                "title": story.title,
+                "panels": [p.file_name for p in story.panels]
+    })
+
+
+@app.route("/stories/", methods=["GET"])
+@api_key_required
+def get_stories():
+    stories = Story.query.all()
+    teasers = []
+    for st in stories:
+        teasers.append({
+            "title": st.title,
+            "start_panel": st.panels[0].file_name
+        })
+    return json_response(data_={
+        "stories": teasers
+    })

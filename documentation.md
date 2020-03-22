@@ -37,7 +37,7 @@ URL: `GET /story/<story_id>/`
 
 ```json
 {
-    "pi_key": "<api_key>"
+    "api_key": "<api_key>"
 }
 
 {

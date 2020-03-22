@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import request
+from flask import request, abort
 
 from backend import app
 from flask_json import json_response
@@ -21,8 +21,10 @@ def testBla():
 @app.route("/register/", methods=["POST"])
 def register():
     print(request.is_json)
+    if not request.is_json:
+        abort(400)
+
     data = request.get_json(force=True)
-    print("Hier")
     username = data["username"]
     password = data["password"]
 
@@ -34,3 +36,8 @@ def register():
     response_dict = {"user_uuid": user_uuid, "username_test_pls_remove_me": username}
 
     return json_response(**response_dict)
+
+
+@app.route("/story/", methods=["POST"])
+def story():
+    pass

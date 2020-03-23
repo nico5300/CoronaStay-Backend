@@ -44,11 +44,6 @@ def api_key_required(f):
     return decorated_function
 
 
-@app.route('/')
-def hello_world():
-    return 'Hello World!'
-
-
 @app.route("/register", methods=["POST"])
 def register():
     if "username" not in g.json_data:

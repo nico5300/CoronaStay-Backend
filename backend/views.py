@@ -14,10 +14,13 @@ from backend.models import User
 from config import IMAGE_ROOT
 
 
-def getDataIfValid():
-    if not request.is_json:  # Kann man vllt entfernen, mal sehen
+@app.before_request
+def check_load_json():
+    # if content type is not application/json or data is not parsable, this will return none
+    json_data = request.get_json(cache=True, silent=True)
+    if json_data is None:
         abort(400)
-    return request.get_json(force=True)  # force=True, damit mime-type nicht beachtet wird
+    g.json_data = json_data
 
 
 def check_api_key(api_key):
@@ -32,11 +35,8 @@ def check_api_key(api_key):
 def api_key_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        data = getDataIfValid()
-        if data is None:
-            abort(400)
         try:
-            api_key = data["api_key"]
+            api_key = g.json_data["api_key"]
             if check_api_key(api_key):
                 g.api_key = api_key
                 return f(*args, **kwargs)
@@ -55,12 +55,10 @@ def hello_world():
 
 @app.route("/register/", methods=["POST"])
 def register():
-    data = getDataIfValid()
-
-    if "username" not in data:
+    if "username" not in g.json_data:
         abort(422)  # Unprocessable Entity
 
-    username = data["username"]
+    username = g.json_data["username"]
     user_uuid = uuid.uuid4()
     new_user = User(name=username, api_key=user_uuid)
 
@@ -76,12 +74,10 @@ def register():
 @app.route("/story/", methods=["POST"])
 @api_key_required
 def story():
-    data = getDataIfValid()
-
-    if ("title" not in data) or ("start_panel" not in data):
+    if ("title" not in g.json_data) or ("start_panel" not in g.json_data):
         abort(422)  # Unprocessable Entity
 
-    img_data = base64.b64decode(data["start_panel"])
+    img_data = base64.b64decode(g.json_data["start_panel"])
     sha = hashlib.sha256()
     sha.update(img_data)
     hash_str = sha.digest().hex()
@@ -92,7 +88,7 @@ def story():
     file.close()
 
     print("jasdfjljdöaf",g.user.name)
-    new_story = Story(user_name=g.user.name, title=data["title"])
+    new_story = Story(user_name=g.user.name, title=g.json_data["title"])
     file_name_on_server = os.path.join(hash_str[:2], hash_str[2:4], file_name)
 
     db.session.add(new_story)

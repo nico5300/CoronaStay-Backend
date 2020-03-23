@@ -1,4 +1,3 @@
-from datetime import datetime
 from functools import wraps
 from flask import request, abort, g
 from sqlalchemy.exc import IntegrityError
@@ -10,7 +9,6 @@ import base64
 import hashlib
 import os
 
-from backend.models import User
 from config import IMAGE_ROOT
 
 
@@ -87,7 +85,6 @@ def story():
     file.write(img_data)
     file.close()
 
-    print("jasdfjljdöaf",g.user.name)
     new_story = Story(user_name=g.user.name, title=g.json_data["title"])
     file_name_on_server = os.path.join(hash_str[:2], hash_str[2:4], file_name)
 

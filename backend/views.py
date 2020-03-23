@@ -1,18 +1,29 @@
 from datetime import datetime
 from functools import wraps
 from flask import request, abort, g
-
-from backend import app
-from backend.models import User, Story
+from sqlalchemy.exc import IntegrityError
+from backend import app, db
+from backend.models import User, Story, Panel
 from flask_json import json_response
-
 import uuid
+import base64
+import hashlib
+import os
+
+from backend.models import User
+from config import IMAGE_ROOT
+
+
+def getDataIfValid():
+    if not request.is_json:  # Kann man vllt entfernen, mal sehen
+        abort(400)
+    return request.get_json(force=True)  # force=True, damit mime-type nicht beachtet wird
 
 
 def check_api_key(api_key):
     user = User.query.filter_by(api_key=api_key).first()
     if user is not None:
-        g.user = User
+        g.user = user
         return True
     else:
         return False
@@ -21,7 +32,7 @@ def check_api_key(api_key):
 def api_key_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        data = request.get_json()
+        data = getDataIfValid()
         if data is None:
             abort(400)
         try:
@@ -33,6 +44,7 @@ def api_key_required(f):
                 abort(401)
         except KeyError:
             abort(400)
+
     return decorated_function
 
 
@@ -41,34 +53,56 @@ def hello_world():
     return 'Hello World!'
 
 
-@app.route("/test/")
-def testBla():
-    return json_response(time=datetime.now())
-
-
 @app.route("/register/", methods=["POST"])
 def register():
-    print(request.is_json)
-    if not request.is_json:
-        abort(400)
+    data = getDataIfValid()
 
-    data = request.get_json(force=True)
+    if "username" not in data:
+        abort(422)  # Unprocessable Entity
+
     username = data["username"]
-    password = data["password"]
+    user_uuid = uuid.uuid4()
+    new_user = User(name=username, api_key=user_uuid)
 
-    user_uuid = uuid.uuid1()
+    try:
+        db.session.add(new_user)
+    except IntegrityError:
+        abort(409)  # 409: Conflict
+        db.session.commit()
 
-    # TODO: Check if already exists
-    # TODO: Save that scheissdregg
-
-    response_dict = {"user_uuid": user_uuid, "username_test_pls_remove_me": username}
-
-    return json_response(**response_dict)
+    return json_response(api_key=user_uuid)
 
 
 @app.route("/story/", methods=["POST"])
+@api_key_required
 def story():
-    pass
+    data = getDataIfValid()
+
+    if ("title" not in data) or ("start_panel" not in data):
+        abort(422)  # Unprocessable Entity
+
+    img_data = base64.b64decode(data["start_panel"])
+    sha = hashlib.sha256()
+    sha.update(img_data)
+    hash_str = sha.digest().hex()
+    target_folder, file_name = os.path.join(IMAGE_ROOT, hash_str[:2], hash_str[2:4]), hash_str[4:] + ".png"
+    os.makedirs(target_folder, exist_ok=True)
+    file = open(os.path.join(target_folder, file_name), mode="wb")      # potentially unsafe, if identical pics..
+    file.write(img_data)
+    file.close()
+
+    print("jasdfjljdöaf",g.user.name)
+    new_story = Story(user_name=g.user.name, title=data["title"])
+    file_name_on_server = os.path.join(hash_str[:2], hash_str[2:4], file_name)
+
+    db.session.add(new_story)
+    db.session.commit()
+
+    new_panel = Panel(story_id=new_story.id_, file_name=file_name_on_server)
+    db.session.add(new_panel)
+    db.session.commit()
+
+    return json_response(story_id=new_story.id_)
 
 
 @app.route("/story/<int:story_id>/", methods=["GET"])
@@ -78,8 +112,8 @@ def get_story(story_id):
     if not story:
         abort(404)
     return json_response(data_={
-                "title": story.title,
-                "panels": [p.file_name for p in story.panels]
+        "title": story.title,
+        "panels": [p.file_name for p in story.panels]
     })
 
 

@@ -9,8 +9,6 @@ import base64
 import hashlib
 import os
 
-from config import IMAGE_ROOT
-
 
 @app.before_request
 def check_load_json():
@@ -79,18 +77,21 @@ def story():
     sha = hashlib.sha256()
     sha.update(img_data)
     hash_str = sha.digest().hex()
-    target_folder, file_name = os.path.join(IMAGE_ROOT, hash_str[:2], hash_str[2:4]), hash_str[4:] + ".png"
+    target_folder = os.path.join(app.config.get('IMAGE_ROOT'), hash_str[:2], hash_str[2:4])
     os.makedirs(target_folder, exist_ok=True)
-    file = open(os.path.join(target_folder, file_name), mode="wb")      # potentially unsafe, if identical pics..
+    file_name = hash_str[4:] + ".png"
+    file = open(os.path.join(target_folder, file_name), mode="wb")  # identical images overwritten
     file.write(img_data)
     file.close()
 
     new_story = Story(user_name=g.user.name, title=g.json_data["title"])
-    file_name_on_server = os.path.join(hash_str[:2], hash_str[2:4], file_name)
-
     db.session.add(new_story)
     db.session.commit()
 
+    file_name_on_server = os.path.join(
+        app.config.get('IMAGE_SERVE_ROOT'),
+        hash_str[:2], hash_str[2:4],
+        file_name)
     new_panel = Panel(story_id=new_story.id_, file_name=file_name_on_server)
     db.session.add(new_panel)
     db.session.commit()

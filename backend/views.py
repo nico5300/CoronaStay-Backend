@@ -44,7 +44,7 @@ def api_key_required(f):
     return decorated_function
 
 
-@app.route("/register", methods=["POST"])
+@app.route("/register/", methods=["POST"])
 def register():
     if "username" not in g.json_data:
         abort(422)  # Unprocessable Entity
@@ -62,7 +62,7 @@ def register():
     return json_response(api_key=user_uuid)
 
 
-@app.route("/story", methods=["POST"])
+@app.route("/story/", methods=["POST"])
 @api_key_required
 def story():
     if ("title" not in g.json_data) or ("start_panel" not in g.json_data):
@@ -94,7 +94,7 @@ def story():
     return json_response(story_id=new_story.id_)
 
 
-@app.route("/story/<int:story_id>", methods=["GET"])
+@app.route("/story/<int:story_id>/", methods=["GET"])
 @api_key_required
 def get_story(story_id):
     story = Story.query.filter_by(id_=story_id).first()
@@ -106,7 +106,7 @@ def get_story(story_id):
     })
 
 
-@app.route("/stories", methods=["GET"])
+@app.route("/stories/", methods=["GET"])
 @api_key_required
 def get_stories():
     stories = Story.query.all()
